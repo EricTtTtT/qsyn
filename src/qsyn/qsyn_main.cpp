@@ -27,6 +27,7 @@
 #include "extractor/extractor_cmd.hpp"
 #include "qcir/qcir_cmd.hpp"
 #include "tensor/tensor_cmd.hpp"
+#include "solovay_kitaev/sk_decomp_cmd.hpp"
 #include "util/sysdep.hpp"
 #include "util/text_format.hpp"
 #include "util/usage.hpp"
@@ -45,6 +46,8 @@ qsyn::device::DeviceMgr device_mgr{"Device"};
 qsyn::qcir::QCirMgr qcir_mgr{"QCir"};
 qsyn::tensor::TensorMgr tensor_mgr{"Tensor"};
 qsyn::zx::ZXGraphMgr zxgraph_mgr{"ZXGraph"};
+qsyn::sk_decomp::SKDMgr skd_mgr{"sk_decomp"};
+
 
 std::string const version_str = fmt::format(
     "qsyn {} - Copyright © 2022-{:%Y}, DVLab NTUEE.\n"
@@ -63,7 +66,7 @@ int main(int argc, char** argv) {
         return;
     });
 
-    if (!qsyn::initialize_qsyn(cli, device_mgr, qcir_mgr, tensor_mgr, zxgraph_mgr)) {
+    if (!qsyn::initialize_qsyn(cli, device_mgr, qcir_mgr, tensor_mgr, zxgraph_mgr, skd_mgr)) {
         return -1;
     }
 

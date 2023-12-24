@@ -21,6 +21,7 @@
 #include "extractor/extractor_cmd.hpp"
 #include "qcir/qcir_cmd.hpp"
 #include "tensor/tensor_cmd.hpp"
+#include "solovay_kitaev/sk_decomp_cmd.hpp"
 #include "util/sysdep.hpp"
 #include "util/usage.hpp"
 #include "zx/zx_cmd.hpp"
@@ -112,7 +113,7 @@ bool read_qsynrc_file(dvlab::CommandLineInterface& cli, std::filesystem::path qs
 
 bool initialize_qsyn(
     dvlab::CommandLineInterface& cli, qsyn::device::DeviceMgr& device_mgr, qsyn::qcir::QCirMgr& qcir_mgr,
-    qsyn::tensor::TensorMgr& tensor_mgr, qsyn::zx::ZXGraphMgr& zxgraph_mgr) {
+    qsyn::tensor::TensorMgr& tensor_mgr, qsyn::zx::ZXGraphMgr& zxgraph_mgr, qsyn::sk_decomp::SKDMgr& skd_mgr) {
     spdlog::set_pattern("%L%v");
     spdlog::set_level(spdlog::level::warn);
 
@@ -124,7 +125,8 @@ bool initialize_qsyn(
         !qsyn::extractor::add_extract_cmds(cli, zxgraph_mgr, qcir_mgr) ||
         !qsyn::qcir::add_qcir_cmds(cli, qcir_mgr) ||
         !qsyn::tensor::add_tensor_cmds(cli, tensor_mgr) ||
-        !qsyn::zx::add_zx_cmds(cli, zxgraph_mgr)) {
+        !qsyn::zx::add_zx_cmds(cli, zxgraph_mgr) ||
+        !qsyn::sk_decomp::add_sk_decomp_cmds(cli, skd_mgr)) {
         return false;
     }
     dvlab::utils::Usage::reset();

@@ -14,13 +14,14 @@
 #include "qcir/qcir_mgr.hpp"
 #include "tensor/tensor_mgr.hpp"
 #include "zx/zxgraph_mgr.hpp"
+#include "solovay_kitaev/sk_decomp_mgr.hpp"
 
 namespace qsyn {
 
 bool read_qsynrc_file(dvlab::CommandLineInterface& cli, std::filesystem::path qsynrc_path);
 bool initialize_qsyn(dvlab::CommandLineInterface& cli, qsyn::device::DeviceMgr& device_mgr,
                      qsyn::qcir::QCirMgr& qcir_mgr, qsyn::tensor::TensorMgr& tensor_mgr,
-                     qsyn::zx::ZXGraphMgr& zxgraph_mgr);
+                     qsyn::zx::ZXGraphMgr& zxgraph_mgr, qsyn::sk_decomp::SKDMgr& skd_mgr);
 dvlab::argparse::ArgumentParser get_qsyn_parser(std::string_view const prog_name);
 
 }  // namespace qsyn
