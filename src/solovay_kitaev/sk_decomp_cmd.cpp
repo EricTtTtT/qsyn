@@ -57,8 +57,8 @@ dvlab::Command sk_decomp_read_cmd(SKDMgr& skd_mgr) {
 
                 parser.add_argument<std::string>("filepath")
                     .constraint(path_readable)
-                    .constraint(allowed_extension({".txt", ""}))
-                    .help("the filepath to a single-qubit unitary matrix. Supported extension: .txt");
+                    .constraint(allowed_extension({".tex", ""}))
+                    .help("the filepath to a single-qubit unitary matrix. Supported extension: .tex");
                     
             },
             [&](ArgumentParser const& parser) {
@@ -95,6 +95,8 @@ dvlab::Command sk_decomp_run_cmd(SKDMgr& skd_mgr) {
 
                 skd_mgr.get()->set_param(parser.parsed("-e") ? parser.get<size_t>("-e") : 1);
                 skd_mgr.get()->set_depth(parser.parsed("-n") ? parser.get<size_t>("-n") : 1);
+                skd_mgr.get()->set_basic_approximations();
+                skd_mgr.get()->run();
                 return CmdExecResult::done;
             }};
 }

@@ -1,0 +1,3 @@
+logger debug
+sk_decomp read benchmark/unitary.tex
+quit -f

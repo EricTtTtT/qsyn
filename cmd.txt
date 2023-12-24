@@ -1,0 +1,5 @@
+cmake -DCMAKE_CXX_COMPILER="/opt/homebrew/opt/llvm/bin/clang++" -B build -S .
+cmake --build build -j 8
+
+./qsyn -f skd.dof
+
