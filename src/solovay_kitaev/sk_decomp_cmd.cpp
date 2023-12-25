@@ -26,12 +26,12 @@ using dvlab::Command;
 
 namespace qsyn::sk_decomp {
 
-bool valid_recursion_depth(size_t const& n, size_t const& e) { 
+bool valid_recursion_depth(int const& n, double const& e) { 
     // If n is too small so that the achievable theoretical difference d(U, S) is greater 
     // than ε, issue an error message and forbid the users from executing the following commands.
     double d = std::pow((init_e * c_approx * c_approx), std::pow(1.5, n)) / c_approx / c_approx;
-    if (d > e) {
-        spdlog::error("n is too small!!");
+    if (0.14 < e) {
+        spdlog::error("e is too large!! please select an e < 0.14");
         return false;
     }
     else {
