@@ -22,6 +22,8 @@ The Solovay Kitaev discrete decomposition algorithm.
 
 namespace qsyn::sk_decomp {
     const double kPI = 3.14159265358979323846;
+    const double init_e = 0.14; // precision required of the initial approximations
+    const double c_approx = 4 * std::sqrt(2);   // magic constant
     using Complex = std::complex<double>;
     using Matrix = std::vector<std::vector<Complex>>;
     using Vector3 = std::array<double, 3>;
@@ -60,16 +62,16 @@ namespace qsyn::sk_decomp {
         bool is_input_unitary() const { return is_unitary(_input_matrix); }
         bool is_input_single_qubit() const { return is_single_qubit(_input_matrix); }
 
-        void set_depth(size_t num) { _depth = num; }
-        size_t get_depth() { return _depth; }
-        void set_length(size_t num) { _length = num; }
+        void set_depth(int num)  { _depth = num;  }
+        void set_length(int num) { _length = num; }
+        void set_param(double num)  { _param = num; }
         size_t get_length() { return _length; }
-        void set_param(size_t num) { _param = num; }
-        size_t get_param() { return _param; }
+        size_t get_depth()  { return _depth;  }
+        size_t get_param()  { return _param;  }
 
         void set_basis(std::vector<std::string> const& basis);
         bool is_generated_approximations() const { return !_basis_approximations.empty(); }
-        void create_basic_approximations(int depth);
+        void create_basic_approximations(int length);
         std::string find_closest_approximation(Matrix const& matrix, std::unordered_map<std::string, Matrix> const& approximations, bool print = false);
         
         void report_basis();
@@ -80,8 +82,8 @@ namespace qsyn::sk_decomp {
         void run();
 
     private:
-        size_t _depth;  // the maximal recursion depth
-        size_t _length; // the length of approximation sequence
+        int _depth;  // the maximal recursion depth
+        int _length; // the length of approximation sequence
         double _param;  // decomposition parameters ε
         std::string _filename;
         std::vector<std::string> _procedures;

@@ -6,8 +6,7 @@
 
 namespace qsyn::sk_decomp {
 
-std::function<bool(size_t const&)> valid_recursion_depth();
-
+bool valid_recursion_depth(size_t const& n, size_t const& e);
 bool add_sk_decomp_cmds(dvlab::CommandLineInterface& cli, sk_decomp::SKDMgr& skd_mgr);
 
 }

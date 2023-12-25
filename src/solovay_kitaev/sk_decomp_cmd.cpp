@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <ostream>
 #include <string>
+#include <cmath>
 
 #include "argparse/arg_parser.hpp"
 #include "argparse/arg_type.hpp"
@@ -25,24 +26,17 @@ using dvlab::Command;
 
 namespace qsyn::sk_decomp {
 
-std::function<bool(size_t const&)> valid_recursion_depth() {
-    return [&](size_t const& n) {
-        if (n < 1) {
-            spdlog::error("The recursion depth must be greater than 0.");
-            return false;
-        }
-        return true;
-        /* 
-        TODO: If n is too small so that the achievable theoretical difference d(U, S) is greater 
-        than ε, issue an error message and forbid the users from executing the following commands.
-        */
-        /*
-        if (qcir_mgr.is_id(id)) return true;
-        spdlog::error("QCir {} does not exist!!", id);
+bool valid_recursion_depth(size_t const& n, size_t const& e) { 
+    // If n is too small so that the achievable theoretical difference d(U, S) is greater 
+    // than ε, issue an error message and forbid the users from executing the following commands.
+    double d = std::pow((init_e * c_approx * c_approx), std::pow(1.5, n)) / c_approx / c_approx;
+    if (d > e) {
+        spdlog::error("n is too small!!");
         return false;
-        */
-        // return false;
-    };
+    }
+    else {
+        return true;
+    }
 }
 
 bool skd_mgr_not_empty(SKDMgr const& skd_mgr) {
@@ -96,22 +90,43 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
             [](ArgumentParser& parser) {
                 parser.description("set the parameters of the decomposition algorithm");
 
-                parser.add_argument<float>("-e")
-                    .constraint([](float const& e) { return e > 0; })
-                    .help("the decomposition parameters, approximate the desired quantum gate to an accuracy within ε > 0");
+                parser.add_argument<double>("-e")
+                    .constraint([](double const& e) { return e > 0; })
+                    .help("the decomposition parameters, approximate the desired \
+                           quantum gate to an accuracy within ε > 0");
 
-                parser.add_argument<size_t>("-l")
-                    .constraint([](size_t const& l) { return l > 0; })
+                parser.add_argument<int>("-l")
+                    .constraint([](int const& l) { return l > 0; })
                     .help("the length of approximation sequence");
+
+                parser.add_argument<int>("-n")
+                    .constraint([](int const& n) { return n > 0; })
+                    .help("maximal recursion depth");
             },
             [&](ArgumentParser const& parser) {
-                if (!skd_mgr_not_empty(skd_mgr)) return CmdExecResult::error;
-                // TODO: create basic approximations again if the l is changed
-                if (parser.get<float>("-e")) {
-                    skd_mgr.get()->set_param(parser.get<float>("-e"));
+                if (!skd_mgr_not_empty(skd_mgr)) {
+                    return CmdExecResult::error;
                 }
-                if (parser.get<size_t>("-l")) {
-                    skd_mgr.get()->set_length(parser.get<size_t>("-l"));
+                if (parser.get<double>("-e")) {
+                    skd_mgr.get()->set_param(parser.get<double>("-e"));
+                } else {
+                    spdlog::error("Decomposition parameter (\"-e\") is not defined yet!");
+                    return CmdExecResult::error;
+                }
+                if (parser.get<int>("-l")) {
+                    skd_mgr.get()->set_length(parser.get<int>("-l"));
+                } else {
+                    spdlog::error("The length of approximation sequence (\"-l\") is not defined yet!");
+                    return CmdExecResult::error;
+                }
+                if (parser.get<int>("-n")) {
+                    skd_mgr.get()->set_depth(parser.get<int>("-n"));
+                } else {
+                    spdlog::error("Maximal recursion depth (\"-n\") is not defined yet!");
+                    return CmdExecResult::error;
+                }
+                if (!valid_recursion_depth(parser.get<int>("-n"), parser.get<double>("-e"))) {
+                    return CmdExecResult::error;
                 }
                 return CmdExecResult::done;
             }};
@@ -131,7 +146,7 @@ dvlab::Command sk_decomp_report_basis_cmd(SKDMgr& skd_mgr) {
                 }
                 if (!skd_mgr.get()->is_generated_approximations()) {
                     skd_mgr.get()->set_basis({"h", "t", "s"}); 
-                    skd_mgr.get()->create_basic_approximations(skd_mgr.get()->get_depth());
+                    skd_mgr.get()->create_basic_approximations(skd_mgr.get()->get_length());
                 }
                 skd_mgr.get()->report_basis();
                 return CmdExecResult::done;
@@ -162,7 +177,7 @@ dvlab::Command sk_decomp_run_cmd(SKDMgr& skd_mgr) {
 
                 if (!skd_mgr.get()->is_generated_approximations()) {
                     skd_mgr.get()->set_basis({"h", "t", "s"}); 
-                    skd_mgr.get()->create_basic_approximations(skd_mgr.get()->get_depth());
+                    skd_mgr.get()->create_basic_approximations(skd_mgr.get()->get_length());
                 }
                 skd_mgr.get()->run();
                 return CmdExecResult::done;

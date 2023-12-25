@@ -210,10 +210,10 @@ void SKD::set_basis(std::vector<std::string> const& basis) {
     }
 }
 
-void SKD::create_basic_approximations(int depth) {
+void SKD::create_basic_approximations(int length) {
     _basis_approximations.clear();
     std::unordered_map<std::string, Matrix> current = _basis_gates;
-    for (int i = 0; i < depth; ++i) {
+    for (int i = 0; i < length; ++i) {
         for (auto const& [name, matrix] : current) {
             _basis_approximations[name] = matrix;
         }
