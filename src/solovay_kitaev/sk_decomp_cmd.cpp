@@ -27,7 +27,11 @@ namespace qsyn::sk_decomp {
 
 std::function<bool(size_t const&)> valid_recursion_depth() {
     return [&](size_t const& n) {
-        if (n >= 1) return true;
+        if (n < 1) {
+            spdlog::error("The recursion depth must be greater than 0.");
+            return false;
+        }
+        return true;
         /* 
         TODO: If n is too small so that the achievable theoretical difference d(U, S) is greater 
         than ε, issue an error message and forbid the users from executing the following commands.
@@ -37,7 +41,7 @@ std::function<bool(size_t const&)> valid_recursion_depth() {
         spdlog::error("QCir {} does not exist!!", id);
         return false;
         */
-        return false;
+        // return false;
     };
 }
 
@@ -73,7 +77,76 @@ dvlab::Command sk_decomp_read_cmd(SKDMgr& skd_mgr) {
                 } else {
                     skd_mgr.set(std::make_unique<SKD>(std::move(buffer_skd)));
                 }
+                if (!skd_mgr.get()->is_input_unitary()) {
+                    spdlog::error("The input matrix is not a unitary matrix.");
+                    return CmdExecResult::error;
+                }
+                if (!skd_mgr.get()->is_input_single_qubit()) {
+                    spdlog::error("The input matrix is not a single-qubit unitary matrix.");
+                    return CmdExecResult::error;
+                }
+
                 skd_mgr.get()->set_filename(std::filesystem::path{filepath}.stem());
+                return CmdExecResult::done;
+            }};
+}
+
+dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
+    return {"set",
+            [](ArgumentParser& parser) {
+                parser.description("set the parameters of the decomposition algorithm");
+
+                parser.add_argument<float>("-e")
+                    .constraint([](float const& e) { return e > 0; })
+                    .help("the decomposition parameters, approximate the desired quantum gate to an accuracy within ε > 0");
+
+                parser.add_argument<size_t>("-l")
+                    .constraint([](size_t const& l) { return l > 0; })
+                    .help("the length of approximation sequence");
+            },
+            [&](ArgumentParser const& parser) {
+                if (!skd_mgr_not_empty(skd_mgr)) return CmdExecResult::error;
+                // TODO: create basic approximations again if the l is changed
+                if (parser.get<float>("-e")) {
+                    skd_mgr.get()->set_param(parser.get<float>("-e"));
+                }
+                if (parser.get<size_t>("-l")) {
+                    skd_mgr.get()->set_length(parser.get<size_t>("-l"));
+                }
+                return CmdExecResult::done;
+            }};
+}
+
+dvlab::Command sk_decomp_report_basis_cmd(SKDMgr& skd_mgr) {
+    return {"report_basis",
+            [](ArgumentParser& parser) {
+                parser.description("report the basic approximation of the gate set");
+            },
+            [&](ArgumentParser const& parser) {
+                if (!skd_mgr_not_empty(skd_mgr)) return CmdExecResult::error;
+                if (parser.num_parsed_args()) {}
+                if (skd_mgr.get()->is_input_empty()) {
+                    spdlog::error("The input matrix is empty.");
+                    return CmdExecResult::error;
+                }
+                if (!skd_mgr.get()->is_generated_approximations()) {
+                    skd_mgr.get()->set_basis({"h", "t", "s"}); 
+                    skd_mgr.get()->create_basic_approximations(skd_mgr.get()->get_depth());
+                }
+                skd_mgr.get()->report_basis();
+                return CmdExecResult::done;
+            }};
+}
+
+dvlab::Command sk_decomp_report_decomp_result_cmd(SKDMgr& skd_mgr) {
+    return {"report_decomp_result",
+            [](ArgumentParser& parser) {
+                parser.description("report the decomposition circuit");
+            },
+            [&](ArgumentParser const& parser) {
+                if (!skd_mgr_not_empty(skd_mgr)) return CmdExecResult::error;
+                if (parser.num_parsed_args()) {}
+                skd_mgr.get()->report_decomp_result();
                 return CmdExecResult::done;
             }};
 }
@@ -82,20 +155,15 @@ dvlab::Command sk_decomp_run_cmd(SKDMgr& skd_mgr) {
     return {"run",
             [](ArgumentParser& parser) {
                 parser.description("Recursively decompose U into a series of single-qubit gates");
-                
-                parser.add_argument<float>("-e")
-                    .constraint([](float const& e) { return e > 0; })
-                    .help("the decomposition parameters, approximate the desired quantum gate to an accuracy within ε > 0");
-
-                parser.add_argument<size_t>("-n")
-                    .constraint(valid_recursion_depth())
-                    .help("the maximal recursion depth");
             },
             [&](ArgumentParser const& parser) {
                 if (!skd_mgr_not_empty(skd_mgr)) return CmdExecResult::error;
+                if (parser.num_parsed_args()) {}
 
-                skd_mgr.get()->set_param(parser.parsed("-e") ? parser.get<float>("-e") : (float)0.14);
-                skd_mgr.get()->set_depth(parser.parsed("-n") ? parser.get<size_t>("-n") : 2);
+                if (!skd_mgr.get()->is_generated_approximations()) {
+                    skd_mgr.get()->set_basis({"h", "t", "s"}); 
+                    skd_mgr.get()->create_basic_approximations(skd_mgr.get()->get_depth());
+                }
                 skd_mgr.get()->run();
                 return CmdExecResult::done;
             }};
@@ -105,6 +173,9 @@ Command sk_decomp_cmd(SKDMgr& skd_mgr) {
     auto cmd = dvlab::utils::mgr_root_cmd(skd_mgr);
 
     cmd.add_subcommand(sk_decomp_read_cmd(skd_mgr));
+    cmd.add_subcommand(sk_decomp_set_cmd(skd_mgr));
+    cmd.add_subcommand(sk_decomp_report_basis_cmd(skd_mgr));
+    cmd.add_subcommand(sk_decomp_report_decomp_result_cmd(skd_mgr));
     cmd.add_subcommand(sk_decomp_run_cmd(skd_mgr));
     return cmd;
 }

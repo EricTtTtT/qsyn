@@ -7,6 +7,7 @@
 #include <complex>
 #include <iostream>
 #include <numbers>
+#include <queue>
 
 #include "./solovay_kitaev.hpp"
 #include "util/dvlab_string.hpp"
@@ -75,6 +76,19 @@ std::pair<Vector3, double> u_to_bloch(Matrix const& matrix) {
     }
 }
 
+bool is_unitary(Matrix const& matrix) {
+    Matrix adj = adjoint(matrix);
+    Matrix identity(matrix.size(), std::vector<Complex>(matrix.size(), Complex(0.0, 0.0)));
+    for (size_t i = 0; i < matrix.size(); ++i) {
+        identity[i][i] = Complex(1.0, 0.0);
+    }
+    return distance(matrix * adj, identity) < 1e-10;
+}
+
+bool is_single_qubit(Matrix const& matrix) {
+    return matrix.size() == 2 && matrix[0].size() == 2;
+}
+
 std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     Vector3 axis;
     double angle;
@@ -87,8 +101,8 @@ std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     Matrix w;
     if (axis[2] > 0) {
         w = {
-            {Complex(std::cos(2.0 * std::numbers::pi - phi / 2.0), 0.0), Complex(0.0, -std::sin(2.0 * std::numbers::pi - phi / 2.0))},
-            {Complex(0.0, -std::sin(2.0 * std::numbers::pi - phi / 2.0)), Complex(std::cos(2.0 * std::numbers::pi - phi / 2.0), 0.0)}
+            {Complex(std::cos(2.0 * kPI - phi / 2.0), 0.0), Complex(0.0, -std::sin(2.0 * kPI - phi / 2.0))},
+            {Complex(0.0, -std::sin(2.0 * kPI - phi / 2.0)), Complex(std::cos(2.0 * kPI - phi / 2.0), 0.0)}
         };
     } else {
         w = {
@@ -106,14 +120,10 @@ std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     return {v_hat, w_hat};
 }
 
-
 bool SKD::read_skd_file(std::filesystem::path const& filepath) {
     auto const extension = filepath.extension();
-
-    if (extension == ".tex")
+    if (extension.compare(".tex") == 0) {
         return read_tex(filepath);
-    else if (extension == "") {
-        return true;
     } else {
         spdlog::error("File format \"{}\" is not supported!!", extension);
         return false;
@@ -140,17 +150,14 @@ bool SKD::read_tex(std::filesystem::path const& filepath) {
         if (line[0] == '%') continue;
         if (line[0] == '\\') {
             if (line.find("\\begin{bmatrix}") != std::string::npos) {
-                spdlog::info("Found the beginning of the circuit");
                 continue;
             } else if (line.find("\\end{bmatrix}") != std::string::npos) {
-                spdlog::info("Found the end of the circuit");
                 break;
             } else {
                 spdlog::error("Unknown command \"{}\"!!", line);
                 return false;
             }
         }
-        spdlog::info("Found a line: {}", line);
         std::replace(line.begin(), line.end(), '&', ' ');
         std::replace(line.begin(), line.end(), '\\', ' ');
         
@@ -185,7 +192,7 @@ void SKD::set_basis(std::vector<std::string> const& basis) {
         } else if (b == "t") {
             _basis_gates["t"] = {
                 {Complex(1.0), Complex(0.0)},
-                {Complex(0.0), std::exp(Complex(0, std::numbers::pi / 4))}
+                {Complex(0.0), std::exp(Complex(0, kPI / 4))}
             };
         } else if (b == "s") {
             _basis_gates["s"] = {
@@ -226,33 +233,50 @@ void SKD::create_basic_approximations(int depth) {
     }
 }
 
-std::string SKD::find_closest_approximation(Matrix const& matrix) {
-    double min_distance = 1e9;
-    std::string min_name;
-    for (auto const& [name, approx] : _basis_approximations) {
+std::string SKD::find_closest_approximation(Matrix const& matrix, std::unordered_map<std::string, Matrix> const& approximations, bool print) {
+    // TODO: change input to gate maps
+    std::priority_queue<std::pair<std::string, double>,
+        std::vector<std::pair<std::string, double>>,
+        std::function<bool(std::pair<std::string, double> const&, std::pair<std::string, double> const&)>>
+        approx_max_heap([](std::pair<std::string, double> const& lhs, std::pair<std::string, double> const& rhs) {
+            return lhs.second < rhs.second;
+        });
+
+    for (auto const& [name, approx] : approximations) {
         double d = distance(matrix, approx);
-        if (d < min_distance) {
-            min_distance = d;
-            min_name = name;
+        if (approx_max_heap.size() < 10) {
+            approx_max_heap.push({name, d});
+        } else if (d < approx_max_heap.top().second) {
+            approx_max_heap.pop();
+            approx_max_heap.push({name, d});
         }
     }
+    
+    std::string min_name;
+    while (!approx_max_heap.empty()) {
+        if (print) {
+            spdlog::info("The approximation is: {}={}", approx_max_heap.top().first, approx_max_heap.top().second);
+        }
+        min_name = approx_max_heap.top().first;
+        approx_max_heap.pop();
+    }
+
+    spdlog::debug("The approximation is: {}", min_name);
     
     return min_name;
 }
 
+void SKD::report_basis() {
+    std::string approx_name = find_closest_approximation(_input_matrix, _basis_approximations, true);
+}
+
+void SKD::report_decomp_result() const {
+    // TODO
+}
 
 Matrix SKD::sk_decomp(Matrix const& u, size_t depth) {
-    // """Solovay-Kitaev Algorithm."""
-    // if n == 0:
-    //     return find_closest_u(gates, u)
-    // else:
-    //     u_next = sk_algo(u, gates, n - 1)
-    //     v, w = gc_decomp(u @ u_next.adjoint())
-    //     v_next = sk_algo(v, gates, n - 1)
-    //     w_next = sk_algo(w, gates, n - 1)
-    //     return v_next @ w_next @ v_next.adjoint() @ w_next.adjoint() @ u_next
     if (depth == 0) {
-        std::string approx_name = find_closest_approximation(u);
+        std::string approx_name = find_closest_approximation(u, _basis_approximations);
         return _basis_approximations[approx_name];
     }
     Matrix u_next = sk_decomp(u, depth - 1);
@@ -264,9 +288,6 @@ Matrix SKD::sk_decomp(Matrix const& u, size_t depth) {
 }
 
 void SKD::run() {
-    set_basis({"h", "t", "s"});
-    create_basic_approximations(_depth);
-
     Matrix approx = sk_decomp(_input_matrix, _depth);
 
     double d = distance(_input_matrix, approx);
