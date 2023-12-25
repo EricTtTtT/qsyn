@@ -21,10 +21,13 @@ The Solovay Kitaev discrete decomposition algorithm.
 */
 
 namespace qsyn::sk_decomp {
+    using Complex = std::complex<double>;
+    using Matrix = std::vector<std::vector<Complex>>;
+    using Vector3 = std::array<double, 3>;
 
     // present sequence of gate
-    using GateSequence = std::vector<qsyn::qcir::GateType>;
     using Gate = qsyn::qcir::QCirGate;
+    using GateSequence = std::vector<Gate>;
 
     class SKD {
         // TODO: define the main structure
@@ -48,8 +51,11 @@ namespace qsyn::sk_decomp {
         void set_param(size_t num) { _param = num; }
         size_t get_param() { return _param; }
 
-        void set_basic_approximations();
-        // Gate find_basic_approximation(std::string const& name, qsyn::qcir::Qubit const& qubit);
+        void set_basis(std::vector<std::string> const& basis);
+        void create_basic_approximations(int depth);
+        std::string find_closest_approximation(Matrix const& matrix);
+
+        Matrix sk_decomp(Matrix const& u, size_t depth);
 
         void run();
 
@@ -61,7 +67,17 @@ namespace qsyn::sk_decomp {
 
         std::vector<std::vector<std::complex<double>>> _input_matrix;
 
-        std::unordered_map<std::string, std::vector<double>> _basic_approximations;  
+        std::unordered_map<std::string, Matrix> _basis_gates;  
+        std::unordered_map<std::string, Matrix> _basis_approximations;
     };
+
+    Matrix operator*(Matrix const& lhs, Matrix const& rhs);
+    double distance(Matrix const& lhs, Matrix const& rhs);
+    Matrix adjoint(Matrix const& matrix);
+    Matrix diagonalize(Matrix const& matrix);
+    std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix);
+    std::pair<Vector3, double> u_to_bloch(Matrix const& matrix);
+    
+
 
 }

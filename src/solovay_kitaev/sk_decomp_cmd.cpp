@@ -83,7 +83,8 @@ dvlab::Command sk_decomp_run_cmd(SKDMgr& skd_mgr) {
             [](ArgumentParser& parser) {
                 parser.description("Recursively decompose U into a series of single-qubit gates");
                 
-                parser.add_argument<size_t>("-e")
+                parser.add_argument<float>("-e")
+                    .constraint([](float const& e) { return e > 0; })
                     .help("the decomposition parameters, approximate the desired quantum gate to an accuracy within ε > 0");
 
                 parser.add_argument<size_t>("-n")
@@ -93,16 +94,14 @@ dvlab::Command sk_decomp_run_cmd(SKDMgr& skd_mgr) {
             [&](ArgumentParser const& parser) {
                 if (!skd_mgr_not_empty(skd_mgr)) return CmdExecResult::error;
 
-                skd_mgr.get()->set_param(parser.parsed("-e") ? parser.get<size_t>("-e") : 1);
-                skd_mgr.get()->set_depth(parser.parsed("-n") ? parser.get<size_t>("-n") : 1);
-                skd_mgr.get()->set_basic_approximations();
+                skd_mgr.get()->set_param(parser.parsed("-e") ? parser.get<float>("-e") : (float)0.14);
+                skd_mgr.get()->set_depth(parser.parsed("-n") ? parser.get<size_t>("-n") : 2);
                 skd_mgr.get()->run();
                 return CmdExecResult::done;
             }};
 }
 
 Command sk_decomp_cmd(SKDMgr& skd_mgr) {
-    
     auto cmd = dvlab::utils::mgr_root_cmd(skd_mgr);
 
     cmd.add_subcommand(sk_decomp_read_cmd(skd_mgr));

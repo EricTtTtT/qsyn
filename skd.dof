@@ -1,3 +1,4 @@
 logger debug
 sk_decomp read benchmark/unitary.tex
+sk_decomp run
 quit -f
