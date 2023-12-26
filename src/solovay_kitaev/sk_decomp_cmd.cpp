@@ -30,12 +30,7 @@ bool valid_recursion_depth(int const& n, double const& e) {
     // If n is too small so that the achievable theoretical difference d(U, S) is greater 
     // than ε, issue an error message and forbid the users from executing the following commands.
     // double d = std::pow((init_e * c_approx * c_approx), std::pow(1.5, n)) / c_approx / c_approx;
-<<<<<<< HEAD
     if (0.5 < e || n >= 0) {
-=======
-    if (n > e) {}
-    if (0.5 < e) {
->>>>>>> 0c7e7cdb375dac0ee74f7afbf21192508af4a85f
         spdlog::error("e is too large!! please select an e < 0.14");
         return false;
     }
