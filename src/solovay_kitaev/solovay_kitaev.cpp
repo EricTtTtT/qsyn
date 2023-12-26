@@ -87,7 +87,8 @@ double trace_dist(Matrix const& lhs, Matrix const& rhs) {
     Matrix adj = adjoint(diff);
     Matrix product = diff * adj;
     Matrix sqrt_product = sqrt(product);
-    return trace(sqrt_product) / 2.0;
+    double result = trace(sqrt_product) / 2.0;
+    return result;
 }
 
 Matrix adjoint(Matrix const& matrix) {
@@ -145,7 +146,7 @@ std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     Vector3 axis;
     double angle;
     std::tie(axis, angle) = u_to_bloch(matrix);
-    double phi = 2.0 * std::asin(std::sqrt(std::sqrt(0.5 - 0.5 * std::cos(angle / 2.0))));
+    double phi = 2.0 * std::asin(std::sqrt(std::sqrt(0.5 - 0.5 * std::sqrt(1 - std::sin(angle / 2.0) * std::sin(angle / 2.0)))));
     Matrix v = {
         {Complex(std::cos(phi / 2.0), 0.0), Complex(0.0, -std::sin(phi / 2.0))},
         {Complex(0.0, -std::sin(phi / 2.0)), Complex(std::cos(phi / 2.0), 0.0)}
@@ -153,13 +154,13 @@ std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     Matrix w;
     if (axis[2] > 0) {
         w = {
-            {Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0), Complex(0.0, -std::sin((2.0 * kPI - phi) / 2.0))},
-            {Complex(0.0, -std::sin((2.0 * kPI - phi) / 2.0)), Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0)}
+            {Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0), Complex(-std::sin((2.0 * kPI - phi) / 2.0), 0.0)},
+            {Complex(std::sin((2.0 * kPI - phi) / 2.0), 0.0), Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0)}
         };
     } else {
         w = {
-            {Complex(std::cos(phi / 2.0), 0.0), Complex(0.0, -std::sin(phi / 2.0))},
-            {Complex(0.0, -std::sin(phi / 2.0)), Complex(std::cos(phi / 2.0), 0.0)}
+            {Complex(std::cos(phi / 2.0), 0.0), Complex(-std::sin(phi / 2.0), 0.0)},
+            {Complex(std::sin(phi / 2.0), 0.0), Complex(std::cos(phi / 2.0), 0.0)}
         };
     }
 
@@ -262,10 +263,10 @@ void SKD::set_basis(std::vector<std::string> const& basis) {
     }
 }
 
-void SKD::create_basic_approximations(int length) {
+void SKD::create_basic_approximations(size_t length) {
     _basis_approximations.clear();
     std::unordered_map<std::string, Matrix> current = _basis_gates;
-    for (int i = 0; i < length; ++i) {
+    for (size_t i = 0; i < length; ++i) {
         for (auto const& [name, matrix] : current) {
             _basis_approximations[name] = matrix;
         }
@@ -314,6 +315,16 @@ std::string SKD::find_closest_approximation(Matrix const& matrix, std::unordered
             std::cout << "  " << std::setw(5) << approx_max_heap.top().first << ": distance=" << approx_max_heap.top().second << std::endl;
         }
         min_name = approx_max_heap.top().first;
+        if (approx_max_heap.size() == 1) {
+            Matrix x = approximations.at(min_name);
+            std::cout << "Closest approximation: " << min_name << std::endl;
+            for (auto row : x) {
+                for (auto num : row) {
+                    std::cout << num.real() << " + " << num.imag() << "i, ";
+                }
+                std::cout << std::endl;
+            }
+        }
         approx_max_heap.pop();
     }
 

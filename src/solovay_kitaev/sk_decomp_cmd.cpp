@@ -26,11 +26,11 @@ using dvlab::Command;
 
 namespace qsyn::sk_decomp {
 
-bool valid_recursion_depth(int const& n, double const& e) { 
+bool valid_recursion_depth(size_t const& n, double const& e) { 
     // If n is too small so that the achievable theoretical difference d(U, S) is greater 
     // than ε, issue an error message and forbid the users from executing the following commands.
     // double d = std::pow((init_e * c_approx * c_approx), std::pow(1.5, n)) / c_approx / c_approx;
-    if (0.5 < e || n >= 0) {
+    if (0.5 < e || n < 0) {
         spdlog::error("e is too large!! please select an e < 0.14");
         return false;
     }
@@ -95,12 +95,12 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                     .help("the decomposition parameters, approximate the desired \
                            quantum gate to an accuracy within ε > 0");
 
-                parser.add_argument<int>("-l")
-                    .constraint([](int const& l) { return l > 0; })
+                parser.add_argument<size_t>("-l")
+                    .constraint([](size_t const& l) { return l > 0; })
                     .help("the length of approximation sequence");
 
-                parser.add_argument<int>("-n")
-                    .constraint([](int const& n) { return n != -1; })
+                parser.add_argument<size_t>("-n")
+                    .constraint([](size_t const& n) { return n >= 0; })
                     .help("maximal recursion depth");
             },
             [&](ArgumentParser const& parser) {
@@ -113,19 +113,19 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                     spdlog::error("Decomposition parameter (\"-e\") is not defined yet!");
                     return CmdExecResult::error;
                 }
-                if (parser.get<int>("-l")) {
-                    skd_mgr.get()->set_length(parser.get<int>("-l"));
+                if (parser.get<size_t>("-l")) {
+                    skd_mgr.get()->set_length(parser.get<size_t>("-l"));
                 } else {
                     spdlog::error("The length of approximation sequence (\"-l\") is not defined yet!");
                     return CmdExecResult::error;
                 }
-                if (parser.get<int>("-n")) {
-                    skd_mgr.get()->set_depth(parser.get<int>("-n"));
+                if (parser.get<size_t>("-n")) {
+                    skd_mgr.get()->set_depth(parser.get<size_t>("-n"));
                 } else {
                     spdlog::error("Maximal recursion depth (\"-n\") is not defined yet!");
                     return CmdExecResult::error;
                 }
-                if (!valid_recursion_depth(parser.get<int>("-n"), parser.get<double>("-e"))) {
+                if (!valid_recursion_depth(parser.get<size_t>("-n"), parser.get<double>("-e"))) {
                     return CmdExecResult::error;
                 }
                 return CmdExecResult::done;

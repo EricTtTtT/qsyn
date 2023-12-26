@@ -70,8 +70,8 @@ namespace qsyn::sk_decomp {
         bool is_input_unitary() const { return is_unitary(_input_matrix); }
         bool is_input_single_qubit() const { return is_single_qubit(_input_matrix); }
 
-        void set_depth(int num)  { _depth = num;  }
-        void set_length(int num) { _length = num; }
+        void set_depth(size_t num)  { _depth = num;  }
+        void set_length(size_t num) { _length = num; }
         void set_param(double num)  { _param = num; }
         size_t get_length() { return _length; }
         size_t get_depth()  { return _depth;  }
@@ -79,7 +79,7 @@ namespace qsyn::sk_decomp {
 
         void set_basis(std::vector<std::string> const& basis);
         bool is_generated_approximations() const { return !_basis_approximations.empty(); }
-        void create_basic_approximations(int length);
+        void create_basic_approximations(size_t length);
         std::string find_closest_approximation(Matrix const& matrix, std::unordered_map<std::string, Matrix> const& approximations, bool print = false);
         
         void report_basis();
@@ -90,8 +90,8 @@ namespace qsyn::sk_decomp {
         void run();
 
     private:
-        int _depth;  // the maximal recursion depth
-        int _length; // the length of approximation sequence
+        size_t _depth;  // the maximal recursion depth
+        size_t _length; // the length of approximation sequence
         double _param;  // decomposition parameters ε
         std::string _filename;
         std::vector<std::string> _procedures;

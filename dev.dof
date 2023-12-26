@@ -1,3 +1,5 @@
 sk_decomp read benchmark/unitary.tex
-sk_decomp set -e 0.14 -l 13 -n 0
+sk_decomp set -e 0.14 -l 10 -n 1
+sk_decomp report_basis
+sk_decomp run
 quit -f
