@@ -32,10 +32,18 @@ namespace qsyn::sk_decomp {
     using Gate = qsyn::qcir::QCirGate;
     using GateSequence = std::vector<Gate>;
 
+    struct InfoMatrix {
+        Matrix matrix;
+        std::string name;
+    };
+
     Matrix operator*(Matrix const& lhs, Matrix const& rhs);
-    double distance(Matrix const& lhs, Matrix const& rhs);
+    Matrix operator-(Matrix const& lhs, Matrix const& rhs);
+    double trace_dist(Matrix const& lhs, Matrix const& rhs);
+    double trace(Matrix const& matrix);
     Matrix adjoint(Matrix const& matrix);
     Matrix diagonalize(Matrix const& matrix);
+    Matrix sqrt(Matrix const& matrix);
     bool is_unitary(Matrix const& matrix);
     bool is_single_qubit(Matrix const& matrix);
     std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix);
@@ -77,7 +85,7 @@ namespace qsyn::sk_decomp {
         void report_basis();
         void report_decomp_result() const;
 
-        Matrix sk_decomp(Matrix const& u, size_t depth);
+        InfoMatrix sk_decomp(Matrix const& u, size_t depth);
 
         void run();
 
@@ -89,6 +97,7 @@ namespace qsyn::sk_decomp {
         std::vector<std::string> _procedures;
 
         Matrix _input_matrix;
+        InfoMatrix _approx_matrix;
 
         std::unordered_map<std::string, Matrix> _basis_gates;  
         std::unordered_map<std::string, Matrix> _basis_approximations;
