@@ -82,6 +82,7 @@ bool is_unitary(Matrix const& matrix) {
     for (size_t i = 0; i < matrix.size(); ++i) {
         identity[i][i] = Complex(1.0, 0.0);
     }
+    std::cout << distance(matrix * adj, identity) << std::endl;
     return distance(matrix * adj, identity) < 1e-10;
 }
 
