@@ -121,9 +121,9 @@ std::pair<Vector3, double> u_to_bloch(Matrix const& matrix) {
     if (sin < 1e-10) {
         return {{0.0, 0.0, 1.0}, 2.0 * angle};
     } else {
-        double nx = ((b + c) / Complex(2.0 * sin)).real();
+        double nx = ((b + c) / Complex(0.0, 2.0 * sin)).real();
         double ny = ((b - c) / Complex(2.0 * sin)).real();
-        double nz = ((a - d) / Complex(2.0 * sin)).real();
+        double nz = ((a - d) / Complex(0.0, 2.0 * sin)).real();
         return {{nx, ny, nz}, 2.0 * angle};
     }
 }
@@ -350,7 +350,6 @@ InfoMatrix SKD::sk_decomp(Matrix const& u, size_t depth) {
     InfoMatrix ret;
     if (depth == 0) {
         std::string approx_name = find_closest_approximation(u, _basis_approximations);
-        add_procedure(approx_name);
         ret.matrix = _basis_approximations[approx_name];
         ret.name = approx_name;
         return ret;

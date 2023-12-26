@@ -105,7 +105,7 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                     .help("the length of approximation sequence");
 
                 parser.add_argument<int>("-n")
-                    .constraint([](int const& n) { return n > 0; })
+                    .constraint([](int const& n) { return n >= 0; })
                     .help("maximal recursion depth");
             },
             [&](ArgumentParser const& parser) {
