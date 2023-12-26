@@ -134,12 +134,7 @@ bool is_unitary(Matrix const& matrix) {
     for (size_t i = 0; i < matrix.size(); ++i) {
         identity[i][i] = Complex(1.0, 0.0);
     }
-<<<<<<< HEAD
-    std::cout << distance(matrix * adj, identity) << std::endl;
-    return distance(matrix * adj, identity) < 1e-10;
-=======
     return trace_dist(matrix * adj, identity) < 1e-4;
->>>>>>> 0c7e7cdb375dac0ee74f7afbf21192508af4a85f
 }
 
 bool is_single_qubit(Matrix const& matrix) {
