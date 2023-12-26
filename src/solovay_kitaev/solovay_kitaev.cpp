@@ -153,8 +153,8 @@ std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     Matrix w;
     if (axis[2] > 0) {
         w = {
-            {Complex(std::cos(2.0 * kPI - phi / 2.0), 0.0), Complex(0.0, -std::sin(2.0 * kPI - phi / 2.0))},
-            {Complex(0.0, -std::sin(2.0 * kPI - phi / 2.0)), Complex(std::cos(2.0 * kPI - phi / 2.0), 0.0)}
+            {Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0), Complex(0.0, -std::sin((2.0 * kPI - phi) / 2.0))},
+            {Complex(0.0, -std::sin((2.0 * kPI - phi) / 2.0)), Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0)}
         };
     } else {
         w = {

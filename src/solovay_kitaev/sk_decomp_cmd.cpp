@@ -30,8 +30,8 @@ bool valid_recursion_depth(int const& n, double const& e) {
     // If n is too small so that the achievable theoretical difference d(U, S) is greater 
     // than ε, issue an error message and forbid the users from executing the following commands.
     // double d = std::pow((init_e * c_approx * c_approx), std::pow(1.5, n)) / c_approx / c_approx;
-    if (0.5 < e || n < 0) {
-        spdlog::error("e is too large!! please select an e < 0.5");
+    if (0.5 < e || n >= 0) {
+        spdlog::error("e is too large!! please select an e < 0.14");
         return false;
     }
     else {
@@ -100,7 +100,7 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                     .help("the length of approximation sequence");
 
                 parser.add_argument<int>("-n")
-                    .constraint([](int const& n) { return n >= 0; })
+                    .constraint([](int const& n) { return n != -1; })
                     .help("maximal recursion depth");
             },
             [&](ArgumentParser const& parser) {
