@@ -130,12 +130,10 @@ std::pair<Vector3, double> u_to_bloch(Matrix const& matrix) {
 }
 
 bool is_unitary(Matrix const& matrix) {
-    Matrix adj = adjoint(matrix);
-    Matrix identity(matrix.size(), std::vector<Complex>(matrix.size(), Complex(0.0, 0.0)));
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        identity[i][i] = Complex(1.0, 0.0);
-    }
-    return trace_dist(matrix * adj, identity) < 1e-4;
+    // python3: abs(np.linalg.det(U2x2)) - 1 < 1e-4
+    Complex x = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]);
+    double det = std::abs(x);
+    return det - 1.0 < 1e-4;
 }
 
 bool is_single_qubit(Matrix const& matrix) {
@@ -167,7 +165,6 @@ std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
     Matrix ud = diagonalize(matrix);
     Matrix vwvdwd = diagonalize(v * w * adjoint(v) * adjoint(w));
     Matrix s = ud * adjoint(vwvdwd);
-
     Matrix v_hat = s * v * adjoint(s);
     Matrix w_hat = s * w * adjoint(s);
     return {v_hat, w_hat};
@@ -233,6 +230,13 @@ bool SKD::read_tex(std::filesystem::path const& filepath) {
     }
 
     return true;
+}
+
+void SKD::print_input_matrix() const {
+    std::cout << "The input matrix is:" << std::endl;
+    for (auto const& row : _input_matrix) {
+        std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
+    }
 }
 
 void SKD::set_basis(std::vector<std::string> const& basis) {
@@ -315,16 +319,6 @@ std::string SKD::find_closest_approximation(Matrix const& matrix, std::unordered
             std::cout << "  " << std::setw(5) << approx_max_heap.top().first << ": distance=" << approx_max_heap.top().second << std::endl;
         }
         min_name = approx_max_heap.top().first;
-        if (approx_max_heap.size() == 1) {
-            Matrix x = approximations.at(min_name);
-            std::cout << "Closest approximation: " << min_name << std::endl;
-            for (auto row : x) {
-                for (auto num : row) {
-                    std::cout << num.real() << " + " << num.imag() << "i, ";
-                }
-                std::cout << std::endl;
-            }
-        }
         approx_max_heap.pop();
     }
 
@@ -340,10 +334,10 @@ void SKD::report_basis() {
 void SKD::report_decomp_result() const {
     double d = trace_dist(_input_matrix, _approx_matrix.matrix);
 
-    std::cout << "Input matrix:" << std::endl;
-    for (auto const& row : _input_matrix) {
-        std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
-    }
+    // std::cout << "Input matrix:" << std::endl;
+    // for (auto const& row : _input_matrix) {
+    //     std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
+    // }
     std::cout << "The approximation is: " << std::endl;
     std::cout << _approx_matrix.name << std::endl;
     for (auto const& row : _approx_matrix.matrix) {
@@ -366,7 +360,7 @@ InfoMatrix SKD::sk_decomp(Matrix const& u, size_t depth) {
     InfoMatrix v_next = sk_decomp(v, depth - 1);
     InfoMatrix w_next = sk_decomp(w, depth - 1);
     ret.matrix = v_next.matrix * w_next.matrix * adjoint(v_next.matrix) * adjoint(w_next.matrix) * u_next.matrix;
-    ret.name = v_next.name + " " + w_next.name + " " + v_next.name + " " + w_next.name + " " + u_next.name;
+    ret.name = " -> (v:" + v_next.name + ", w:" + w_next.name + ", u+: " + u_next.name + ")";
     return ret;
 }
 
@@ -378,15 +372,15 @@ void SKD::run() {
 
     double d = trace_dist(_input_matrix, approx.matrix);
 
-    std::cout << "Input matrix:" << std::endl;
-    for (auto const& row : _input_matrix) {
-        std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
-    }
+    // std::cout << "Input matrix:" << std::endl;
+    // for (auto const& row : _input_matrix) {
+    //     std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
+    // }
     std::cout << "The approximation is: " << std::endl;
     for (auto const& row : approx.matrix) {
         std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
     }
-    std::cout << "The distance is: " << d << std::endl;
+    std::cout << "The distance is: " << d  << std::endl;
 }
 
 }  // namespace qsyn::sk_decomp

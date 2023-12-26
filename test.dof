@@ -1,0 +1,34 @@
+sk_decomp read benchmark/unitary.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary11.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary12.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary13.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary14.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary15.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary16.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary17.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary18.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary19.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+sk_decomp read benchmark/unitary20.tex
+sk_decomp set -l 8 -n 4
+sk_decomp run
+quit -f

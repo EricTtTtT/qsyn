@@ -52,7 +52,7 @@ namespace qsyn::sk_decomp {
     class SKD {
         // TODO: define the main structure
     public:
-        SKD(): _depth(0), _length(0), _param(0.0), _filename(""), _procedures({}) {}
+        SKD(): _depth(0), _length(0), _param(0.14), _filename(""), _procedures({}) {}
         ~SKD() = default;
         SKD(SKD const& other);
         SKD(SKD&& other) noexcept = default;
@@ -82,6 +82,7 @@ namespace qsyn::sk_decomp {
         void create_basic_approximations(size_t length);
         std::string find_closest_approximation(Matrix const& matrix, std::unordered_map<std::string, Matrix> const& approximations, bool print = false);
         
+        void print_input_matrix() const;
         void report_basis();
         void report_decomp_result() const;
 

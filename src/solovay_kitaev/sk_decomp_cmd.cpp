@@ -73,6 +73,7 @@ dvlab::Command sk_decomp_read_cmd(SKDMgr& skd_mgr) {
                 }
                 if (!skd_mgr.get()->is_input_unitary()) {
                     spdlog::error("The input matrix is not a unitary matrix.");
+                    skd_mgr.get()->print_input_matrix();
                     return CmdExecResult::error;
                 }
                 if (!skd_mgr.get()->is_input_single_qubit()) {
@@ -109,10 +110,11 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                 }
                 if (parser.get<double>("-e")) {
                     skd_mgr.get()->set_param(parser.get<double>("-e"));
-                } else {
-                    spdlog::error("Decomposition parameter (\"-e\") is not defined yet!");
-                    return CmdExecResult::error;
                 }
+                // else {
+                //     spdlog::error("Decomposition parameter (\"-e\") is not defined yet!");
+                //     return CmdExecResult::error;
+                // }
                 if (parser.get<size_t>("-l")) {
                     skd_mgr.get()->set_length(parser.get<size_t>("-l"));
                 } else {
@@ -125,9 +127,9 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                     spdlog::error("Maximal recursion depth (\"-n\") is not defined yet!");
                     return CmdExecResult::error;
                 }
-                if (!valid_recursion_depth(parser.get<size_t>("-n"), parser.get<double>("-e"))) {
-                    return CmdExecResult::error;
-                }
+                // if (!valid_recursion_depth(parser.get<size_t>("-n"), parser.get<double>("-e"))) {
+                //     return CmdExecResult::error;
+                // }
                 return CmdExecResult::done;
             }};
 }
