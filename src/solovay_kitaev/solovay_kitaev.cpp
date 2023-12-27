@@ -83,12 +83,25 @@ double trace_dist(Matrix const& lhs, Matrix const& rhs) {
     // """Compute trace distance between two 2x2 matrices."""
     // return np.real(0.5 * np.trace(np.sqrt((u - v).adjoint() @ (u - v))))
     
-    Matrix diff = lhs - rhs;
-    Matrix adj = adjoint(diff);
-    Matrix product = diff * adj;
-    Matrix sqrt_product = sqrt(product);
-    double result = trace(sqrt_product) / 2.0;
-    return result;
+    // Matrix diff = lhs - rhs;
+    // Matrix adj = adjoint(diff);
+    // Matrix product = diff * adj;
+    // Matrix sqrt_product = sqrt(product);
+    // double result = trace(sqrt_product) / 2.0;
+    // return result;
+
+    double distance = 0.0;
+
+    assert(lhs.size() == 2 && rhs.size() == 2);
+
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            std::complex<double> diff = lhs[i][j] - rhs[i][j];
+            distance += std::norm(diff);  // Using std::norm to calculate squared magnitude for complex numbers
+        }
+    }
+
+    return std::sqrt(distance);
 }
 
 Matrix adjoint(Matrix const& matrix) {
