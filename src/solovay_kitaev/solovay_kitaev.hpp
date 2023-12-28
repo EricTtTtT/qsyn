@@ -38,12 +38,14 @@ namespace qsyn::sk_decomp {
     };
 
     Matrix operator*(Matrix const& lhs, Matrix const& rhs);
+    Matrix operator*(Complex const& lhs, Matrix const& rhs);
     Matrix operator-(Matrix const& lhs, Matrix const& rhs);
     double trace_dist(Matrix const& lhs, Matrix const& rhs);
     double trace(Matrix const& matrix);
     Matrix adjoint(Matrix const& matrix);
     Matrix diagonalize(Matrix const& matrix);
     Matrix sqrt(Matrix const& matrix);
+    Matrix to_su2(Matrix const& matrix);
     bool is_unitary(Matrix const& matrix);
     bool is_single_qubit(Matrix const& matrix);
     std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix);

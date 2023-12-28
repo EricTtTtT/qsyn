@@ -28,6 +28,16 @@ Matrix operator*(Matrix const& lhs, Matrix const& rhs) {
     return result;
 }
 
+Matrix operator*(Complex const& lhs, Matrix const& rhs) {
+    Matrix result(rhs.size(), std::vector<Complex>(rhs[0].size(), Complex(0.0, 0.0)));
+    for (size_t i = 0; i < rhs.size(); ++i) {
+        for (size_t j = 0; j < rhs[0].size(); ++j) {
+            result[i][j] = lhs * rhs[i][j];
+        }
+    }
+    return result;
+}
+
 Matrix operator-(Matrix const& lhs, Matrix const& rhs) {
     Matrix result(lhs.size(), std::vector<Complex>(lhs[0].size(), Complex(0.0, 0.0)));
     for (size_t i = 0; i < lhs.size(); ++i) {
@@ -126,6 +136,13 @@ Matrix diagonalize(Matrix const& matrix) {
     result[0][0] = lambda1;
     result[1][1] = lambda2;
     return result;
+}
+
+Matrix to_su2(Matrix const& matrix) {
+    // z = 1 / np.sqrt(np.linalg.det(u2_matrix))
+    // su2_matrix = z * u2_matrix
+    Complex det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+    return std::sqrt(Complex(1.0) / det) * matrix;
 }
 
 std::pair<Vector3, double> u_to_bloch(Matrix const& matrix) {
@@ -285,7 +302,7 @@ void SKD::create_basic_approximations(size_t length) {
     std::unordered_map<std::string, Matrix> current = _basis_gates;
     for (size_t i = 0; i < length; ++i) {
         for (auto const& [name, matrix] : current) {
-            _basis_approximations[name] = matrix;
+            _basis_approximations[name] = to_su2(matrix);
         }
         std::unordered_map<std::string, Matrix> next;
         for (auto const& [name, matrix] : current) {
