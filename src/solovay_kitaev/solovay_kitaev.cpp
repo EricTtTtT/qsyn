@@ -42,9 +42,21 @@ Matrix3 rotate_angle(double const& angle, Vector3 const& axis) {
 }
 
 double solve_phi(Matrix3 const& matrix) {
-    // TODO
-    std::cout << matrix << std::endl;
-    return 0;
+    Matrix2 m2 = so3_to_su2(matrix);
+    Complex a = m2(0, 0), b = m2(0, 1), c = m2(1, 0), d = m2(1, 1);
+    double angle = std::acos((a + d) / 2.0).real();
+    Vector3 axis = get_rotation_axis(matrix);
+    if (angle < 1e-10) {
+        axis = {0.0, 0.0, 1.0};
+    } else {
+        double nx = ((b + c) / Complex(0.0, 2.0 * std::sin(angle))).real();
+        double ny = ((b - c) / Complex(2.0 * std::sin(angle))).real();
+        double nz = ((a - d) / Complex(0.0, 2.0 * std::sin(angle))).real();
+        axis = {nx, ny, nz};
+    }
+    angle = 2.0 * angle;
+    double phi = 2.0 * std::asin(std::sqrt(std::sqrt(0.5 - 0.5 * std::sqrt(1 - std::sin(angle / 2.0) * std::sin(angle / 2.0)))));
+    return phi;
 }
 
 Matrix3 get_rotation_between(Vector3 const& from, Vector3 const& to) {
@@ -291,7 +303,6 @@ void SKD::create_basic_approximations(size_t length) {
         for (auto const& gs : curr_) {
             _basis_approximations.emplace_back(gs);
         }
-        std::cout << "generating approximations of length " << i + 1 << std::endl;
         std::vector<GateSequence> next_;
         for (auto const& gs_c : curr_) {
             for (GateSequence const& gs_b : _basis_gs) {
@@ -307,11 +318,6 @@ void SKD::create_basic_approximations(size_t length) {
     }
 
     spdlog::debug("The number of approximations is: {}", _basis_approximations.size());
-    for (auto const& gs : _basis_approximations) {
-        std::cout << "  " << gs.to_string() << std::endl;
-        std::cout << gs.matrix3 << std::endl;
-        std::cout << gs.matrix2 << std::endl;
-    }
 }
 
 size_t SKD::find_closest_approximation(GateSequence const& gs, bool print) {
@@ -403,7 +409,7 @@ GateSequence SKD::sk_decomp(GateSequence const& u, size_t depth) {
     GateSequence w_next = sk_decomp(w, depth - 1);
     GateSequence ret;
     ret.matrix3 = v_next.matrix3 * w_next.matrix3 * v_next.matrix3.adjoint() * w_next.matrix3.adjoint() * u_next.matrix3;
-    ret.gates = {"v:" + v_next.to_string(), "w:" + w_next.to_string(), "u+:" + u_next.to_string()};
+    ret.gates = {"v:(" + v_next.to_string(), "), w:(" + w_next.to_string(), "), u+:(" + u_next.to_string(), ")"};
     return ret;
 }
 
@@ -419,7 +425,7 @@ void SKD::run() {
 
     double d = distance(_input_matrix, _approx_matrix.matrix2);
     std::cout << "The approximation is: " << std::endl;
-    std::cout << _approx_matrix.to_string() << std::endl;
+    // std::cout << _approx_matrix.to_string() << std::endl;
     std::cout << _approx_matrix.matrix2 << std::endl;
     std::cout << "The distance is: " << d << std::endl;
 }
