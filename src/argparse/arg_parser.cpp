@@ -385,6 +385,9 @@ bool ArgumentParser::_parse_options(TokensSpan tokens) {
         // among which only the last one can have an subsequent argument.
 
         auto const [single_char_options, remainder_token] = _explode_option(token);
+        if (single_char_options.empty()) {
+            return true;
+        }
 
         for (auto const& [j, option] : tl::views::enumerate(single_char_options)) {
             auto& arg = _get_arg(option);
