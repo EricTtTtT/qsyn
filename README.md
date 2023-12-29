@@ -15,6 +15,10 @@
 <!-- ![example branch parameter](https://github.com/DVLab-NTU/qsyn/actions/workflows/build-and-test.yml/badge.svg)
  -->
 
+# Warning!
+The current version is not complete for qiskit implementation.
+For running experiments, please checkout to commit: b9bbf2c
+
 ## Introduction
 
 `qsyn` is a `C++`-based growing software system for synthesizing, optimizing, and verifying quantum circuits to aid the development of quantum computing. `qsyn` implements scalable quantum circuit optimization by combining ZX-Calculus and technology mapping.
