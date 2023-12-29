@@ -28,9 +28,9 @@ namespace qsyn::sk_decomp {
     const double c_approx = 4 * std::sqrt(2);   // magic constant
     using Complex = std::complex<double>;
 
-    using Matrix3 = Eigen::Matrix3cd;
+    using Matrix3 = Eigen::Matrix3d;
     using Matrix2 = Eigen::Matrix2cd;
-    using MatrixX = Eigen::MatrixXcd;
+    using Vector3 = Eigen::Vector3d;
 
     struct GateSequence {
         std::vector<std::string> gates;
@@ -41,28 +41,24 @@ namespace qsyn::sk_decomp {
         GateSequence operator*(GateSequence const& other) const;
     };
 
-    // Matrix operator*(Matrix const& lhs, Matrix const& rhs);
-    // Matrix operator*(Complex const& lhs, Matrix const& rhs);
-    // Matrix operator-(Matrix const& lhs, Matrix const& rhs);
-    // double trace_dist(Matrix const& lhs, Matrix const& rhs);
-    // double trace(Matrix const& matrix);
-    // Matrix adjoint(Matrix const& matrix);
-    // Matrix diagonalize(Matrix const& matrix);
-    // Matrix sqrt(Matrix const& matrix);
     Matrix2 u2_to_su2(Matrix2 const& matrix);
     Matrix3 su2_to_so3(Matrix2 const& matrix);
+    Matrix2 so3_to_su2(Matrix3 const& matrix);
     bool is_unitary(Matrix2 const& matrix);
     bool is_single_qubit(Matrix2 const& matrix);
 
-    double distance(MatrixX const& lhs, MatrixX const& rhs);
-    // double distance2(Matrix2 const& lhs, Matrix2 const& rhs);
+    Matrix3 rotate_angle(double const& angle, Vector3 const& axis);
+    double solve_phi(Matrix3 const& matrix);
+    Matrix3 get_commutator(Matrix3 const& lhs, Matrix3 const& rhs);
+    Vector3 get_rotation_axis(Matrix3 const& matrix);
+    Matrix3 get_rotation_between(Vector3 const& from, Vector3 const& to);
 
+    double distance(Matrix3 const& lhs, Matrix3 const& rhs);
+    double distance(Matrix2 const& lhs, Matrix2 const& rhs);
 
     void group_comm_decomp(Matrix3 const& matrix, GateSequence& v, GateSequence& w);
-    // std::pair<Vector3, double> u_to_bloch(Matrix const& matrix);
 
     class SKD {
-        // TODO: define the main structure
     public:
         SKD(): _depth(0), _length(0), _param(0.14), _filename(""), _procedures({}) {}
         ~SKD() = default;
@@ -113,7 +109,8 @@ namespace qsyn::sk_decomp {
         Matrix2 _input_matrix;
         GateSequence _approx_matrix;
 
-        std::unordered_map<std::string, Matrix2> _basis_gates;  
+        std::unordered_map<std::string, Matrix2> _basis_gates;
+        std::vector<GateSequence> _basis_gs; 
         std::vector<GateSequence> _basis_approximations;
     };
 }
