@@ -101,7 +101,6 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                     .help("the length of approximation sequence");
 
                 parser.add_argument<size_t>("-n")
-                    .constraint([](size_t const& n) { return n >= 0; })
                     .help("maximal recursion depth");
             },
             [&](ArgumentParser const& parser) {
@@ -123,9 +122,6 @@ dvlab::Command sk_decomp_set_cmd(SKDMgr& skd_mgr) {
                 }
                 if (parser.get<size_t>("-n")) {
                     skd_mgr.get()->set_depth(parser.get<size_t>("-n"));
-                } else {
-                    spdlog::error("Maximal recursion depth (\"-n\") is not defined yet!");
-                    return CmdExecResult::error;
                 }
                 // if (!valid_recursion_depth(parser.get<size_t>("-n"), parser.get<double>("-e"))) {
                 //     return CmdExecResult::error;

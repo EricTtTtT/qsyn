@@ -16,6 +16,8 @@
 #include "qsyn/qsyn_type.hpp"
 #include "spdlog/common.h"
 
+#include <Eigen/Dense>
+
 /*
 The Solovay Kitaev discrete decomposition algorithm.
 */
@@ -25,31 +27,39 @@ namespace qsyn::sk_decomp {
     const double init_e = 0.14; // precision required of the initial approximations
     const double c_approx = 4 * std::sqrt(2);   // magic constant
     using Complex = std::complex<double>;
-    using Matrix = std::vector<std::vector<Complex>>;
-    using Vector3 = std::array<double, 3>;
 
-    // present sequence of gate
-    using Gate = qsyn::qcir::QCirGate;
-    using GateSequence = std::vector<Gate>;
+    using Matrix3 = Eigen::Matrix3cd;
+    using Matrix2 = Eigen::Matrix2cd;
+    using MatrixX = Eigen::MatrixXcd;
 
-    struct InfoMatrix {
-        Matrix matrix;
-        std::string name;
+    struct GateSequence {
+        std::vector<std::string> gates;
+        Matrix2 matrix2;
+        Matrix3 matrix3;
+
+        std::string to_string() const;
+        GateSequence operator*(GateSequence const& other) const;
     };
 
-    Matrix operator*(Matrix const& lhs, Matrix const& rhs);
-    Matrix operator*(Complex const& lhs, Matrix const& rhs);
-    Matrix operator-(Matrix const& lhs, Matrix const& rhs);
-    double trace_dist(Matrix const& lhs, Matrix const& rhs);
-    double trace(Matrix const& matrix);
-    Matrix adjoint(Matrix const& matrix);
-    Matrix diagonalize(Matrix const& matrix);
-    Matrix sqrt(Matrix const& matrix);
-    Matrix to_su2(Matrix const& matrix);
-    bool is_unitary(Matrix const& matrix);
-    bool is_single_qubit(Matrix const& matrix);
-    std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix);
-    std::pair<Vector3, double> u_to_bloch(Matrix const& matrix);
+    // Matrix operator*(Matrix const& lhs, Matrix const& rhs);
+    // Matrix operator*(Complex const& lhs, Matrix const& rhs);
+    // Matrix operator-(Matrix const& lhs, Matrix const& rhs);
+    // double trace_dist(Matrix const& lhs, Matrix const& rhs);
+    // double trace(Matrix const& matrix);
+    // Matrix adjoint(Matrix const& matrix);
+    // Matrix diagonalize(Matrix const& matrix);
+    // Matrix sqrt(Matrix const& matrix);
+    Matrix2 u2_to_su2(Matrix2 const& matrix);
+    Matrix3 su2_to_so3(Matrix2 const& matrix);
+    bool is_unitary(Matrix2 const& matrix);
+    bool is_single_qubit(Matrix2 const& matrix);
+
+    double distance(MatrixX const& lhs, MatrixX const& rhs);
+    // double distance2(Matrix2 const& lhs, Matrix2 const& rhs);
+
+
+    void group_comm_decomp(Matrix3 const& matrix, GateSequence& v, GateSequence& w);
+    // std::pair<Vector3, double> u_to_bloch(Matrix const& matrix);
 
     class SKD {
         // TODO: define the main structure
@@ -68,7 +78,7 @@ namespace qsyn::sk_decomp {
         bool read_skd_file(std::filesystem::path const& filepath);
         bool read_tex(std::filesystem::path const& filepath);
 
-        bool is_input_empty() const { return _input_matrix.empty(); }
+        bool is_input_empty() const { return _input_matrix.isZero(); }
         bool is_input_unitary() const { return is_unitary(_input_matrix); }
         bool is_input_single_qubit() const { return is_single_qubit(_input_matrix); }
 
@@ -82,13 +92,14 @@ namespace qsyn::sk_decomp {
         void set_basis(std::vector<std::string> const& basis);
         bool is_generated_approximations() const { return !_basis_approximations.empty(); }
         void create_basic_approximations(size_t length);
-        std::string find_closest_approximation(Matrix const& matrix, std::unordered_map<std::string, Matrix> const& approximations, bool print = false);
+
+        size_t find_closest_approximation(GateSequence const& gs, bool print = false);
         
         void print_input_matrix() const;
         void report_basis();
         void report_decomp_result() const;
 
-        InfoMatrix sk_decomp(Matrix const& u, size_t depth);
+        GateSequence sk_decomp(GateSequence const& u, size_t depth);
 
         void run();
 
@@ -99,14 +110,10 @@ namespace qsyn::sk_decomp {
         std::string _filename;
         std::vector<std::string> _procedures;
 
-        Matrix _input_matrix;
-        InfoMatrix _approx_matrix;
+        Matrix2 _input_matrix;
+        GateSequence _approx_matrix;
 
-        std::unordered_map<std::string, Matrix> _basis_gates;  
-        std::unordered_map<std::string, Matrix> _basis_approximations;
+        std::unordered_map<std::string, Matrix2> _basis_gates;  
+        std::vector<GateSequence> _basis_approximations;
     };
-
-
-
-
 }

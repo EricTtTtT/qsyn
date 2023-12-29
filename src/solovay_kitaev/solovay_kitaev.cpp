@@ -1,6 +1,7 @@
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
 
+#include <cmath>
 #include <cstddef>
 #include <fstream>
 #include <string>
@@ -8,6 +9,7 @@
 #include <iostream>
 #include <numbers>
 #include <queue>
+#include <cassert>
 
 #include "./solovay_kitaev.hpp"
 #include "util/dvlab_string.hpp"
@@ -16,188 +18,220 @@
 
 namespace qsyn::sk_decomp {
 
-Matrix operator*(Matrix const& lhs, Matrix const& rhs) {
-    Matrix result(lhs.size(), std::vector<Complex>(rhs[0].size(), Complex(0.0, 0.0)));
-    for (size_t i = 0; i < lhs.size(); ++i) {
-        for (size_t j = 0; j < rhs[0].size(); ++j) {
-            for (size_t k = 0; k < lhs[0].size(); ++k) {
-                result[i][j] += lhs[i][k] * rhs[k][j];
-            }
-        }
+std::string GateSequence::to_string() const {
+    std::string ret;
+    for (auto const& gate : gates) {
+        ret += gate + " ";
     }
-    return result;
+    return ret;
 }
 
-Matrix operator*(Complex const& lhs, Matrix const& rhs) {
-    Matrix result(rhs.size(), std::vector<Complex>(rhs[0].size(), Complex(0.0, 0.0)));
-    for (size_t i = 0; i < rhs.size(); ++i) {
-        for (size_t j = 0; j < rhs[0].size(); ++j) {
-            result[i][j] = lhs * rhs[i][j];
-        }
-    }
-    return result;
-}
+// Matrix operator*(Matrix const& lhs, Matrix const& rhs) {
+//     Matrix result(lhs.size(), std::vector<Complex>(rhs[0].size(), Complex(0.0, 0.0)));
+//     for (size_t i = 0; i < lhs.size(); ++i) {
+//         for (size_t j = 0; j < rhs[0].size(); ++j) {
+//             for (size_t k = 0; k < lhs[0].size(); ++k) {
+//                 result[i][j] += lhs[i][k] * rhs[k][j];
+//             }
+//         }
+//     }
+//     return result;
+// }
 
-Matrix operator-(Matrix const& lhs, Matrix const& rhs) {
-    Matrix result(lhs.size(), std::vector<Complex>(lhs[0].size(), Complex(0.0, 0.0)));
-    for (size_t i = 0; i < lhs.size(); ++i) {
-        for (size_t j = 0; j < lhs[0].size(); ++j) {
-            result[i][j] = lhs[i][j] - rhs[i][j];
-        }
-    }
-    return result;
-}
+// Matrix operator*(Complex const& lhs, Matrix const& rhs) {
+//     Matrix result(rhs.size(), std::vector<Complex>(rhs[0].size(), Complex(0.0, 0.0)));
+//     for (size_t i = 0; i < rhs.size(); ++i) {
+//         for (size_t j = 0; j < rhs[0].size(); ++j) {
+//             result[i][j] = lhs * rhs[i][j];
+//         }
+//     }
+//     return result;
+// }
 
-Matrix sqrt(Matrix const& matrix) {
-    // Calculating the trace and determinant
-    Complex trace = matrix[0][0] + matrix[1][1];
-    Complex det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
-    Complex s = std::sqrt(trace * trace / 4.0 - det);
-    Complex lambda1 = trace / 2.0 + s;
-    Complex lambda2 = trace / 2.0 - s;
+// Matrix operator-(Matrix const& lhs, Matrix const& rhs) {
+//     Matrix result(lhs.size(), std::vector<Complex>(lhs[0].size(), Complex(0.0, 0.0)));
+//     for (size_t i = 0; i < lhs.size(); ++i) {
+//         for (size_t j = 0; j < lhs[0].size(); ++j) {
+//             result[i][j] = lhs[i][j] - rhs[i][j];
+//         }
+//     }
+//     return result;
+// }
 
-    // Compute the square roots of the eigenvalues
-    lambda1 = std::sqrt(lambda1);
-    lambda2 = std::sqrt(lambda2);
+// Matrix sqrt(Matrix const& matrix) {
+//     // Calculating the trace and determinant
+//     Complex trace = matrix[0][0] + matrix[1][1];
+//     Complex det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+//     Complex s = std::sqrt(trace * trace / 4.0 - det);
+//     Complex lambda1 = trace / 2.0 + s;
+//     Complex lambda2 = trace / 2.0 - s;
 
-    // If the matrix is diagonal, return the square roots of the diagonal elements
-    if (matrix[0][1] == Complex(0, 0) && matrix[1][0] == Complex(0, 0)) {
-        return {{lambda1, Complex(0, 0)}, {Complex(0, 0), lambda2}};
-    }
+//     // Compute the square roots of the eigenvalues
+//     lambda1 = std::sqrt(lambda1);
+//     lambda2 = std::sqrt(lambda2);
 
-    // If the matrix is not diagonal, use a simplification for the square root
-    // This part is an approximation and may not be accurate for all matrices
-    Complex a = matrix[0][0];
-    Complex b = matrix[0][1];
-    Complex c = matrix[1][0];
-    Complex d = matrix[1][1];
+//     // If the matrix is diagonal, return the square roots of the diagonal elements
+//     if (matrix[0][1] == Complex(0, 0) && matrix[1][0] == Complex(0, 0)) {
+//         return {{lambda1, Complex(0, 0)}, {Complex(0, 0), lambda2}};
+//     }
 
-    // Solving the system for the square root matrix elements
-    Complex x = std::sqrt((a + lambda1) / 2.0);
-    Complex y = b / (2.0 * x);
-    Complex z = c / (2.0 * x);
-    Complex w = std::sqrt((d + lambda2) / 2.0);
+//     // If the matrix is not diagonal, use a simplification for the square root
+//     // This part is an approximation and may not be accurate for all matrices
+//     Complex a = matrix[0][0];
+//     Complex b = matrix[0][1];
+//     Complex c = matrix[1][0];
+//     Complex d = matrix[1][1];
 
-    return {{x, y}, {z, w}};
-}
+//     // Solving the system for the square root matrix elements
+//     Complex x = std::sqrt((a + lambda1) / 2.0);
+//     Complex y = b / (2.0 * x);
+//     Complex z = c / (2.0 * x);
+//     Complex w = std::sqrt((d + lambda2) / 2.0);
 
-double trace(Matrix const& matrix) {
-    double result = 0;
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        result += matrix[i][i].real();
-    }
-    return result;
-}
+//     return {{x, y}, {z, w}};
+// }
 
-double trace_dist(Matrix const& lhs, Matrix const& rhs) {
-    // """Compute trace distance between two 2x2 matrices."""
-    // return np.real(0.5 * np.trace(np.sqrt((u - v).adjoint() @ (u - v))))
-    
-    // Matrix diff = lhs - rhs;
-    // Matrix adj = adjoint(diff);
-    // Matrix product = diff * adj;
-    // Matrix sqrt_product = sqrt(product);
-    // double result = trace(sqrt_product) / 2.0;
-    // return result;
+// double trace(Matrix const& matrix) {
+//     double result = 0;
+//     for (size_t i = 0; i < matrix.size(); ++i) {
+//         result += matrix[i][i].real();
+//     }
+//     return result;
+// }
 
+// double trace_dist(Matrix const& lhs, Matrix const& rhs) {
+//     double distance = 0.0;
+
+//     for (size_t i = 0; i < lhs.size(); ++i) {
+//         for (size_t j = 0; j < lhs[0].size(); ++j) {
+//             std::complex<double> diff = lhs[i][j] - rhs[i][j];
+//             distance += std::norm(diff);  // Using std::norm to calculate squared magnitude for complex numbers
+//         }
+//     }
+
+//     return std::sqrt(distance);
+// }
+
+double distance(MatrixX const& lhs, MatrixX const& rhs) {
     double distance = 0.0;
-
-    assert(lhs.size() == 2 && rhs.size() == 2);
-
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 2; ++j) {
-            std::complex<double> diff = lhs[i][j] - rhs[i][j];
-            distance += std::norm(diff);  // Using std::norm to calculate squared magnitude for complex numbers
-        }
-    }
-
-    return std::sqrt(distance);
+    MatrixX diff = lhs - rhs;
+    distance = diff.norm();
+    distance = std::sqrt(distance);
+    return distance;
 }
 
-Matrix adjoint(Matrix const& matrix) {
-    Matrix result(matrix[0].size(), std::vector<Complex>(matrix.size(), Complex(0.0, 0.0)));
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        for (size_t j = 0; j < matrix[0].size(); ++j) {
-            result[j][i] = std::conj(matrix[i][j]);
-        }
-    }
-    return result;
-}
+// Matrix adjoint(Matrix const& matrix) {
+//     Matrix result(matrix[0].size(), std::vector<Complex>(matrix.size(), Complex(0.0, 0.0)));
+//     for (size_t i = 0; i < matrix.size(); ++i) {
+//         for (size_t j = 0; j < matrix[0].size(); ++j) {
+//             result[j][i] = std::conj(matrix[i][j]);
+//         }
+//     }
+//     return result;
+// }
 
-Matrix diagonalize(Matrix const& matrix) {
-    Complex a = matrix[0][0], b = matrix[0][1], c = matrix[1][0], d = matrix[1][1];
-    Complex trace = a + d;
-    Complex det = a * d - b * c;
+// Matrix diagonalize(Matrix const& matrix) {
+//     Complex a = matrix[0][0], b = matrix[0][1], c = matrix[1][0], d = matrix[1][1];
+//     Complex trace = a + d;
+//     Complex det = a * d - b * c;
     
-    Complex lambda1 = (trace + std::sqrt(trace * trace - Complex(4.0) * det)) / Complex(2.0);
-    Complex lambda2 = (trace - std::sqrt(trace * trace - Complex(4.0) * det)) / Complex(2.0);
+//     Complex lambda1 = (trace + std::sqrt(trace * trace - Complex(4.0) * det)) / Complex(2.0);
+//     Complex lambda2 = (trace - std::sqrt(trace * trace - Complex(4.0) * det)) / Complex(2.0);
 
-    Matrix result(matrix.size(), std::vector<Complex>(matrix[0].size(), Complex(0.0, 0.0)));
-    result[0][0] = lambda1;
-    result[1][1] = lambda2;
-    return result;
-}
+//     Matrix result(matrix.size(), std::vector<Complex>(matrix[0].size(), Complex(0.0, 0.0)));
+//     result[0][0] = lambda1;
+//     result[1][1] = lambda2;
+//     return result;
+// }
 
-Matrix to_su2(Matrix const& matrix) {
-    // z = 1 / np.sqrt(np.linalg.det(u2_matrix))
-    // su2_matrix = z * u2_matrix
-    Complex det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+Matrix2 u2_to_su2(Matrix2 const& matrix) {
+    Complex det = matrix.determinant();
     return std::sqrt(Complex(1.0) / det) * matrix;
 }
 
-std::pair<Vector3, double> u_to_bloch(Matrix const& matrix) {
-    Complex a = matrix[0][0], b = matrix[0][1], c = matrix[1][0], d = matrix[1][1];
-    double angle = std::acos((a + d) / 2.0).real();
-    double sin = std::sin(angle);
-    if (sin < 1e-10) {
-        return {{0.0, 0.0, 1.0}, 2.0 * angle};
-    } else {
-        double nx = ((b + c) / Complex(0.0, 2.0 * sin)).real();
-        double ny = ((b - c) / Complex(2.0 * sin)).real();
-        double nz = ((a - d) / Complex(0.0, 2.0 * sin)).real();
-        return {{nx, ny, nz}, 2.0 * angle};
-    }
+Matrix3 su2_to_so3(Matrix2 const& matrix) {
+    double a = matrix(0, 0).real();
+    double b = matrix(0, 0).imag();
+    double c = -matrix(0, 1).real();
+    double d = -matrix(0, 1).imag();
+    Matrix3 rotation {
+        {a * a - b * b - c * c + d * d, 2 * a * b + 2 * c * d, -2 * a * c + 2 * b * d},
+        {-2 * a * b + 2 * c * d, a * a - b * b + c * c - d * d, 2 * a * d + 2 * b * c},
+        {2 * a * c + 2 * b * d, 2 * b * c - 2 * a * d, a * a + b * b - c * c - d * d}
+    };
+    return rotation;
 }
 
-bool is_unitary(Matrix const& matrix) {
-    // python3: abs(np.linalg.det(U2x2)) - 1 < 1e-4
-    Complex x = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]);
+// std::pair<Vector3, double> u_to_bloch(Matrix const& matrix) {
+//     Complex a = matrix[0][0], b = matrix[0][1], c = matrix[1][0], d = matrix[1][1];
+//     double angle = std::acos((a + d) / 2.0).real();
+//     double sin = std::sin(angle);
+//     if (sin < 1e-10) {
+//         return {{0.0, 0.0, 1.0}, 2.0 * angle};
+//     } else {
+//         double nx = ((b + c) / Complex(0.0, 2.0 * sin)).real();
+//         double ny = ((b - c) / Complex(2.0 * sin)).real();
+//         double nz = ((a - d) / Complex(0.0, 2.0 * sin)).real();
+//         return {{nx, ny, nz}, 2.0 * angle};
+//     }
+// }
+
+bool is_unitary(Matrix2 const& matrix) {
+    // Complex x = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]);
+    Complex x = matrix.determinant();
     double det = std::abs(x);
     return det - 1.0 < 1e-4;
 }
 
-bool is_single_qubit(Matrix const& matrix) {
-    return matrix.size() == 2 && matrix[0].size() == 2;
+bool is_single_qubit(Matrix2 const& matrix) {
+    return matrix.size() == 4;
 }
 
-std::pair<Matrix, Matrix> group_comm_decomp(Matrix const& matrix) {
-    Vector3 axis;
-    double angle;
-    std::tie(axis, angle) = u_to_bloch(matrix);
-    double phi = 2.0 * std::asin(std::sqrt(std::sqrt(0.5 - 0.5 * std::sqrt(1 - std::sin(angle / 2.0) * std::sin(angle / 2.0)))));
-    Matrix v = {
-        {Complex(std::cos(phi / 2.0), 0.0), Complex(0.0, -std::sin(phi / 2.0))},
-        {Complex(0.0, -std::sin(phi / 2.0)), Complex(std::cos(phi / 2.0), 0.0)}
-    };
-    Matrix w;
-    if (axis[2] > 0) {
-        w = {
-            {Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0), Complex(-std::sin((2.0 * kPI - phi) / 2.0), 0.0)},
-            {Complex(std::sin((2.0 * kPI - phi) / 2.0), 0.0), Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0)}
-        };
-    } else {
-        w = {
-            {Complex(std::cos(phi / 2.0), 0.0), Complex(-std::sin(phi / 2.0), 0.0)},
-            {Complex(std::sin(phi / 2.0), 0.0), Complex(std::cos(phi / 2.0), 0.0)}
-        };
-    }
+void group_comm_decomp(Matrix3 const& matrix, GateSequence& v, GateSequence& w) {
+    // Vector3 axis;
+    // double angle;
+    // std::tie(axis, angle) = u_to_bloch(matrix);
+    // double phi = 2.0 * std::asin(std::sqrt(std::sqrt(0.5 - 0.5 * std::sqrt(1 - std::sin(angle / 2.0) * std::sin(angle / 2.0)))));
+    // Matrix v = {
+    //     {Complex(std::cos(phi / 2.0), 0.0), Complex(0.0, -std::sin(phi / 2.0))},
+    //     {Complex(0.0, -std::sin(phi / 2.0)), Complex(std::cos(phi / 2.0), 0.0)}
+    // };
+    // Matrix w;
+    // if (axis[2] > 0) {
+    //     w = {
+    //         {Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0), Complex(-std::sin((2.0 * kPI - phi) / 2.0), 0.0)},
+    //         {Complex(std::sin((2.0 * kPI - phi) / 2.0), 0.0), Complex(std::cos((2.0 * kPI - phi) / 2.0), 0.0)}
+    //     };
+    // } else {
+    //     w = {
+    //         {Complex(std::cos(phi / 2.0), 0.0), Complex(-std::sin(phi / 2.0), 0.0)},
+    //         {Complex(std::sin(phi / 2.0), 0.0), Complex(std::cos(phi / 2.0), 0.0)}
+    //     };
+    // }
 
-    Matrix ud = diagonalize(matrix);
-    Matrix vwvdwd = diagonalize(v * w * adjoint(v) * adjoint(w));
-    Matrix s = ud * adjoint(vwvdwd);
-    Matrix v_hat = s * v * adjoint(s);
-    Matrix w_hat = s * w * adjoint(s);
-    return {v_hat, w_hat};
+    // Matrix ud = diagonalize(matrix);
+    // Matrix vwvdwd = diagonalize(v * w * adjoint(v) * adjoint(w));
+    // Matrix s = ud * adjoint(vwvdwd);
+    // Matrix v_hat = s * v * adjoint(s);
+    // Matrix w_hat = s * w * adjoint(s);
+    // return {v_hat, w_hat};
+
+    // double phi = _solve_phi(matrix);
+    // Matrix vx = _rotate_angle(phi, {1.0, 0.0, 0.0});
+    // Matrix vy = _rotate_angle(phi, {0.0, 1.0, 0.0});
+    // Matrix commutator = _get_commutator(vx, vy);
+
+    // Vector3 matrix_axis = _get_rotation_axis(matrix);
+    // Vector3 commutator_axis = _get_rotation_axis(commutator);
+
+    // Matrix sim_matrix = _get_rotation_between(matrix_axis, commutator_axis);
+    // Matrix sim_matrix_dagger = adjoint(sim_matrix);
+
+    // Matrix v = sim_matrix * vx * sim_matrix_dagger;
+    // Matrix w = sim_matrix * vy * sim_matrix_dagger;
+
+    // return {v, w};
+    std::cout << matrix << v.to_string() << w.to_string() << std::endl;
 }
 
 bool SKD::read_skd_file(std::filesystem::path const& filepath) {
@@ -216,10 +250,6 @@ bool SKD::read_tex(std::filesystem::path const& filepath) {
         spdlog::error("Cannot open the TEX file \"{}\"!!", filepath);
         return false;
     }
-    // set _input_matrix[2][2]
-    _input_matrix.resize(2);
-    _input_matrix[0].resize(2);
-    _input_matrix[1].resize(2);
 
     size_t row_id = 0;
 
@@ -248,41 +278,40 @@ bool SKD::read_tex(std::filesystem::path const& filepath) {
         size_t col_id = 0;
         while (iss >> realPart >> plus >> imagPart >> i) {
             std::complex<double> num(realPart, imagPart);
-            _input_matrix[row_id][col_id] = num;
+            _input_matrix(row_id, col_id) = num;
             ++col_id;
         }
         ++row_id;
     }
 
     spdlog::debug("The input matrix is:");
-    for (auto const& row : _input_matrix) {
-        spdlog::debug("{} + {}i, {} + {}i", row[0].real(), row[0].imag(), row[1].real(), row[1].imag());
-    }
-
+    spdlog::debug("  {} + {}i, {} + {}i", _input_matrix(0, 0).real(), _input_matrix(0, 0).imag(), _input_matrix(0, 1).real(), _input_matrix(0, 1).imag());
+    spdlog::debug("  {} + {}i, {} + {}i", _input_matrix(1, 0).real(), _input_matrix(1, 0).imag(), _input_matrix(1, 1).real(), _input_matrix(1, 1).imag());
     return true;
 }
 
 void SKD::print_input_matrix() const {
     std::cout << "The input matrix is:" << std::endl;
-    for (auto const& row : _input_matrix) {
-        std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
-    }
+    // for (auto const& row : _input_matrix) {
+    //     std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
+    // }
+    std::cout << _input_matrix << std::endl;
 }
 
 void SKD::set_basis(std::vector<std::string> const& basis) {
     for (std::string b : basis) {
         if (b == "h") {
-            _basis_gates["h"] = {
+            _basis_gates["h"] = Matrix2 {
                 {Complex(1.0 / std::sqrt(2)), Complex(1.0 / std::sqrt(2))},
                 {Complex(1.0 / std::sqrt(2)), Complex(-1.0 / std::sqrt(2))}
             };
         } else if (b == "t") {
-            _basis_gates["t"] = {
+            _basis_gates["t"] = Matrix2 {
                 {Complex(1.0), Complex(0.0)},
                 {Complex(0.0), std::exp(Complex(0, kPI / 4))}
             };
         } else if (b == "s") {
-            _basis_gates["s"] = {
+            _basis_gates["s"] = Matrix2 {
                 {Complex(1.0), Complex(0.0)},
                 {Complex(0.0), Complex(0.0, 1.0)}
             };
@@ -290,127 +319,141 @@ void SKD::set_basis(std::vector<std::string> const& basis) {
             spdlog::error("Unknown basis gate \"{}\"!!", b);
         }
     }
-    spdlog::debug("The basis gates are:");
-    for (auto const& [name, matrix] : _basis_gates) {
-        spdlog::debug("{}: {} + {}i, {} + {}i", name, matrix[0][0].real(), matrix[0][0].imag(), matrix[0][1].real(), matrix[0][1].imag());
-        spdlog::debug("{}: {} + {}i, {} + {}i", name, matrix[1][0].real(), matrix[1][0].imag(), matrix[1][1].real(), matrix[1][1].imag());
-    }
 }
 
 void SKD::create_basic_approximations(size_t length) {
     _basis_approximations.clear();
-    std::unordered_map<std::string, Matrix> current = _basis_gates;
-    for (size_t i = 0; i < length; ++i) {
-        for (auto const& [name, matrix] : current) {
-            _basis_approximations[name] = to_su2(matrix);
-        }
-        std::unordered_map<std::string, Matrix> next;
-        for (auto const& [name, matrix] : current) {
-            for (auto const& [name2, matrix2] : _basis_gates) {
-                next[name + name2] = matrix * matrix2;
-            }
-        }
-        current = next;
+    std::vector<GateSequence> curr_;
+    for (auto const& [name, matrix] : _basis_gates) {
+        curr_.emplace_back(GateSequence{{name}, u2_to_su2(matrix), su2_to_so3(u2_to_su2(matrix))});
     }
 
-    spdlog::debug("The basic approximations are:");
-    for (auto const& [name, matrix] : _basis_approximations) {
-        spdlog::debug("{}: {} + {}i, {} + {}i", name, matrix[0][0].real(), matrix[0][0].imag(), matrix[0][1].real(), matrix[0][1].imag());
-        spdlog::debug("{}: {} + {}i, {} + {}i", name, matrix[1][0].real(), matrix[1][0].imag(), matrix[1][1].real(), matrix[1][1].imag());
+    for (size_t i = 0; i < length; ++i) {
+        for (auto const& gs : curr_) {
+            _basis_approximations.emplace_back(gs);
+        }
+        std::vector<GateSequence> next_;
+        for (auto const& gs : curr_) {
+            for (auto const& [name2, matrix2] : _basis_gates) {
+                std::vector<std::string> gates = gs.gates;
+                Matrix2 su2 = gs.matrix2 * matrix2;
+                gates.emplace_back(name2);
+                next_.emplace_back(GateSequence{
+                    gates,
+                    su2,
+                    su2_to_so3(su2) * gs.matrix3
+                });
+            }
+        }
+        curr_ = next_;
     }
 }
 
-std::string SKD::find_closest_approximation(Matrix const& matrix, std::unordered_map<std::string, Matrix> const& approximations, bool print) {
+size_t SKD::find_closest_approximation(GateSequence const& gs, bool print) {
     size_t report_num = 20;
     
-    std::priority_queue<std::pair<std::string, double>,
-        std::vector<std::pair<std::string, double>>,
-        std::function<bool(std::pair<std::string, double> const&, std::pair<std::string, double> const&)>>
-        approx_max_heap([](std::pair<std::string, double> const& lhs, std::pair<std::string, double> const& rhs) {
+    std::priority_queue<std::pair<size_t, double>,
+        std::vector<std::pair<size_t, double>>,
+        std::function<bool(std::pair<size_t, double> const&, std::pair<size_t, double> const&)>>
+        approx_max_heap([](std::pair<size_t, double> const& lhs, std::pair<size_t, double> const& rhs) {
             return lhs.second < rhs.second;
         });
 
-    for (auto const& [name, approx] : approximations) {
-        double d = trace_dist(matrix, approx);
+    for (size_t i=0; i<_basis_approximations.size(); ++i) {
+        double d = distance(gs.matrix3, _basis_approximations[i].matrix3);
         if (approx_max_heap.size() < report_num) {
-            approx_max_heap.push({name, d});
+            approx_max_heap.push({i, d});
         } else if (d < approx_max_heap.top().second) {
             approx_max_heap.pop();
-            approx_max_heap.push({name, d});
+            approx_max_heap.push({i, d});
         }
     }
-    
+
     std::string min_name;
     if (print) {
         std::cout << "Report the closest " << report_num << " approximations:" << std::endl;
     }
+    std::vector<std::pair<size_t, double>> id_dist_sorted;
     while (!approx_max_heap.empty()) {
-        if (print) {
-            std::cout << "  " << std::setw(5) << approx_max_heap.top().first << ": distance=" << approx_max_heap.top().second << std::endl;
-        }
-        min_name = approx_max_heap.top().first;
+        size_t gs_idx = approx_max_heap.top().first;
+        std::string gs_name = _basis_approximations[gs_idx].to_string();
+        id_dist_sorted.emplace_back(std::make_pair(gs_idx, approx_max_heap.top().second));
         approx_max_heap.pop();
     }
+    if (print) {
+        for (auto it = id_dist_sorted.rbegin(); it != id_dist_sorted.rend(); ++it) {
+            size_t gs_idx = it->first;
+            std::string gs_name = _basis_approximations[gs_idx].to_string();
+            std::cout << "  gate: " << std::setw(20) << gs_name << ", distance=" << it->second << std::endl;
+        }
+    }
 
-    // spdlog::debug("The approximation is: {}", min_name);
-    
-    return min_name;
+    return id_dist_sorted.back().first;
 }
 
 void SKD::report_basis() {
-    std::string approx_name = find_closest_approximation(_input_matrix, _basis_approximations, true);
+    // std::string approx_name = find_closest_approximation(_input_matrix, _basis_approximations, true);
 }
 
 void SKD::report_decomp_result() const {
-    double d = trace_dist(_input_matrix, _approx_matrix.matrix);
+    // double d = trace_dist(_input_matrix, _approx_matrix.matrix);
 
-    // std::cout << "Input matrix:" << std::endl;
-    // for (auto const& row : _input_matrix) {
+    // // std::cout << "Input matrix:" << std::endl;
+    // // for (auto const& row : _input_matrix) {
+    // //     std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
+    // // }
+    // std::cout << "The approximation is: " << std::endl;
+    // std::cout << _approx_matrix.name << std::endl;
+    // for (auto const& row : _approx_matrix.matrix) {
     //     std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
     // }
-    std::cout << "The approximation is: " << std::endl;
-    std::cout << _approx_matrix.name << std::endl;
-    for (auto const& row : _approx_matrix.matrix) {
-        std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
-    }
-    std::cout << "The distance is: " << d << std::endl;
+    // std::cout << "The distance is: " << d << std::endl;
 }
 
-InfoMatrix SKD::sk_decomp(Matrix const& u, size_t depth) {
-    InfoMatrix ret;
+GateSequence SKD::sk_decomp(GateSequence const& u, size_t depth) {
     if (depth == 0) {
-        std::string approx_name = find_closest_approximation(u, _basis_approximations);
-        ret.matrix = _basis_approximations[approx_name];
-        ret.name = approx_name;
-        return ret;
+        size_t approx_idx = find_closest_approximation(u);
+        return _basis_approximations[approx_idx];
     }
-    InfoMatrix u_next = sk_decomp(u, depth - 1);
-    Matrix v, w;
-    std::tie(v, w) = group_comm_decomp(u * adjoint(u_next.matrix));
-    InfoMatrix v_next = sk_decomp(v, depth - 1);
-    InfoMatrix w_next = sk_decomp(w, depth - 1);
-    ret.matrix = v_next.matrix * w_next.matrix * adjoint(v_next.matrix) * adjoint(w_next.matrix) * u_next.matrix;
-    ret.name = " -> (v:" + v_next.name + ", w:" + w_next.name + ", u+: " + u_next.name + ")";
+
+    // u_n1 = self._recurse(sequence, n - 1, check_input=check_input)
+    // # print(f"n: {n}, ori_distance: {np.linalg.norm(np.subtract(u_n1.product, sequence.product))}")
+
+    // v_n, w_n = commutator_decompose(
+    //     sequence.dot(u_n1.adjoint()).product, check_input=check_input
+    // )
+
+    // v_n1 = self._recurse(v_n, n - 1, check_input=check_input)
+    // w_n1 = self._recurse(w_n, n - 1, check_input=check_input)
+    // approx = v_n1.dot(w_n1).dot(v_n1.adjoint()).dot(w_n1.adjoint()).dot(u_n1)
+
+    GateSequence u_next = sk_decomp(u, depth - 1);
+    GateSequence v, w;
+    group_comm_decomp(u.matrix3, v, w);
+    GateSequence v_next = sk_decomp(v, depth - 1);
+    GateSequence w_next = sk_decomp(w, depth - 1);
+    // ret.matrix = v_next.matrix * w_next.matrix * adjoint(v_next.matrix) * adjoint(w_next.matrix) * u_next.matrix;
+    // ret.name = " -> (v:" + v_next.name + ", w:" + w_next.name + ", u+: " + u_next.name + ")";
+    GateSequence ret;
+    ret.matrix3 = v_next.matrix3 * w_next.matrix3 * v_next.matrix3.adjoint() * w_next.matrix3.adjoint() * u_next.matrix3;
+    ret.matrix2 = v_next.matrix2 * w_next.matrix2 * v_next.matrix2.adjoint() * w_next.matrix2.adjoint() * u_next.matrix2;
+    ret.gates = {"v:" + v_next.to_string(), "w:" + w_next.to_string(), "u+:" + u_next.to_string()};
     return ret;
 }
 
 void SKD::run() {
     spdlog::info("parameters: depth={}, length={}, param={}", _depth, _length, _param);
-    InfoMatrix approx = sk_decomp(_input_matrix, _depth);
-    _approx_matrix.matrix = approx.matrix;
-    _approx_matrix.name = approx.name;
+    GateSequence input_gs;
+    input_gs.gates = {""};
+    input_gs.matrix2 = u2_to_su2(_input_matrix);
+    input_gs.matrix3 = su2_to_so3(input_gs.matrix2);
+    _approx_matrix = sk_decomp(input_gs, _depth);
 
-    double d = trace_dist(_input_matrix, approx.matrix);
-
-    // std::cout << "Input matrix:" << std::endl;
-    // for (auto const& row : _input_matrix) {
-    //     std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
-    // }
+    double d = distance(_input_matrix, _approx_matrix.matrix2);
     std::cout << "The approximation is: " << std::endl;
-    for (auto const& row : approx.matrix) {
-        std::cout << "  " << row[0].real() << " + " << row[0].imag() << "i, " << row[1].real() << " + " << row[1].imag() << "i" << std::endl;
-    }
-    std::cout << "The distance is: " << d  << std::endl;
+    std::cout << _approx_matrix.to_string() << std::endl;
+    std::cout << _approx_matrix.matrix2 << std::endl;
+    std::cout << "The distance is: " << d << std::endl;
 }
 
 }  // namespace qsyn::sk_decomp
